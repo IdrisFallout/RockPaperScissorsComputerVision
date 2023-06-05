@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Feed</title>
+    <style>
+        video {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Camera Feed</h1>
+    <video id="videoElement" autoplay></video>
+
+    <script>
+        // Get the video element
+        const videoElement = document.getElementById('videoElement');
+
+        // Check if the browser supports the getUserMedia API
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            // Get access to the camera/webcam
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    // Set the video element's source to the camera stream
+                    videoElement.srcObject = stream;
+
+                    // Create a canvas element to capture video frames
+                    const canvasElement = document.createElement('canvas');
+                    const context = canvasElement.getContext('2d');
+
+                    // Function to send video frames to the Flask server
+                    function sendVideoFrame() {
+                        // Set the canvas size to match the video element
+                        canvasElement.width = videoElement.videoWidth;
+                        canvasElement.height = videoElement.videoHeight;
+
+                        // Draw the current video frame onto the canvas
+                        context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+                        // Get the image data from the canvas as a base64-encoded string
+                        const imageData = canvasElement.toDataURL('image/jpeg');
+
+                        // Send the image data to the Flask server using AJAX
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', '/process_frame', true);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.send(JSON.stringify({ frame: imageData }));
+
+                        // Schedule the next frame capture
+                        requestAnimationFrame(sendVideoFrame);
+                    }
+
+                    // Start sending video frames to the Flask server
+                    sendVideoFrame();
+                })
+                .catch(function (error) {
+                    console.log('Error accessing camera:', error);
+                });
+        } else {
+            console.log('getUserMedia API is not supported in this browser.');
+        }
+    </script>
+</body>
+</html>
